@@ -57,7 +57,9 @@ class Dispatcher:
             state.free_vm(r.id_)
 
         # 对虚拟机按照内存从小到大排序，并计划需要购买的机器
-        add_request.sort(key=Request.get_vm_model)
+        # TODO 不可随便排序，排序之后顺序就不对了
+        # add_request.sort(key=Request.get_vm_model)
+
         planed_server = {}
         top_server_type = state.get_top_memory_server_type()
         deploy_record = []

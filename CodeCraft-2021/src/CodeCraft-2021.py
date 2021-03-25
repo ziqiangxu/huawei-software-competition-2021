@@ -33,7 +33,6 @@ def main():
     # #获取T天的用户请求
     dispatcher = Dispatcher()
     serve_days = int(sys.stdin.readline())
-    request_count = 0
     for day in range(serve_days):
         request_num = int(sys.stdin.readline())
         del_request = []
@@ -45,9 +44,8 @@ def main():
             else:
                 # ADD
                 add_request.append(req)
-            request_count += 1
         dispatcher.handle_requests(del_request, add_request)
-        # if day > 400:
+        # if day == 2:
         #     # 只处理部分的请求，进行测试
         #     break
     # logging.info(f'{request_count} requests has been handled')
