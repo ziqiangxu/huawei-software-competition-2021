@@ -24,7 +24,7 @@ class State:
     @server_types.setter
     def server_types(self, types: List[ServerType]):
         # 对服务器按照内存从小到大排序
-        types.sort(key=ServerType.get_memory, reverse=True)
+        # types.sort(key=ServerType.get_memory, reverse=True)
         for t in types:
             key = t.server_model.strip()
             self._server_types_hash[key] = t
@@ -66,7 +66,7 @@ class State:
         """
         return self._server_types[0]
 
-    def deploy_vm(self, vm: Vm, server: Server = None) -> str:
+    def add_vm(self, vm: Vm, server: Server = None) -> str:
         """
         :param vm:
         :param server:
@@ -94,7 +94,7 @@ class State:
         """
         self.servers.sort(key=Server.get_round_available_memory, reverse=True)
 
-    def free_vm(self, id_: int):
+    def del_vm(self, id_: int):
         """
         # TODO 根据给定的
         释放某个虚拟机

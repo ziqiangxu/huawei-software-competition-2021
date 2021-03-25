@@ -54,7 +54,7 @@ class Dispatcher:
 
         # #### 销毁虚拟机
         for r in del_requests:
-            state.free_vm(r.id_)
+            state.del_vm(r.id_)
 
         # 对虚拟机按照内存从小到大排序，并计划需要购买的机器
         # TODO 不可随便排序，排序之后顺序就不对了
@@ -67,7 +67,7 @@ class Dispatcher:
             vm = Vm(r.vm_type, r.id_)
             deploy_record.append(vm)
 
-            node = state.deploy_vm(vm)
+            node = state.add_vm(vm)
 
             # except MyException:
             if node == 'F':
@@ -82,7 +82,9 @@ class Dispatcher:
                 server_list.append(server)
                 planed_server[server_type.server_model] = server_list
                 # 新的服务器，一定可以部署这个虚拟机
-                _ = state.deploy_vm(vm, server)
+                state.add_vm(vm, server)
+                # node = state.deploy_vm(vm, server)
+                # assert node != 'F'
 
         # #### 扩容
 
@@ -108,3 +110,6 @@ class Dispatcher:
         # ### 部署虚拟机
         # 先放大的，再放小的
         # logging.debug(add_request)
+
+        # for server in state.servers:
+        #     server.check_test()
