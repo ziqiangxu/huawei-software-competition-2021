@@ -35,16 +35,12 @@ def main():
     serve_days = int(sys.stdin.readline())
     for day in range(serve_days):
         request_num = int(sys.stdin.readline())
-        del_request = []
-        add_request = []
+        requests = []
         for i in range(request_num):
             req = Request(sys.stdin.readline())
-            if req.action == req.DEL:
-                del_request.append(req)
-            else:
-                # ADD
-                add_request.append(req)
-        dispatcher.handle_requests(del_request, add_request)
+            requests.append(req)
+        # TODO 必须依次处理请求
+        dispatcher.handle_requests(requests)
         # if day == 2:
         #     # 只处理部分的请求，进行测试
         #     break

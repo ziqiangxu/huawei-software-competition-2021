@@ -43,19 +43,12 @@ class Dispatcher:
     def __init__(self):
         pass
 
-    def handle_requests(self, del_requests: List[Request], add_request: List[Request]):
+    def handle_requests(self, requests: List[Request]):
         """
         TODO 暂时选择内存和核心数最大的服务器，进行虚拟机部署
-        :param add_request:
-        :type del_requests: object
+        :param requests:
         :return:
         """
-        # TODO 对于一批请求，需要进行采购，分配
-
-        # #### 销毁虚拟机
-        for r in del_requests:
-            state.del_vm(r.id_)
-
         # 对虚拟机按照内存从小到大排序，并计划需要购买的机器
         # TODO 不可随便排序，排序之后顺序就不对了
         # add_request.sort(key=Request.get_vm_model)
@@ -63,7 +56,11 @@ class Dispatcher:
         planed_server = {}
         top_server_type = state.get_top_memory_server_type()
         deploy_record = []
-        for r in add_request:
+        for r in requests:
+            if Request.DEL == r.action:
+                state.del_vm(r.id_)
+                continue
+                
             vm = Vm(r.vm_type, r.id_)
             deploy_record.append(vm)
 
