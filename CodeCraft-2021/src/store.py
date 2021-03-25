@@ -66,7 +66,7 @@ class State:
         """
         return self._server_types[0]
 
-    def deploy_vm(self, vm: Vm, server: Server = None) -> Tuple[Server, str]:
+    def deploy_vm(self, vm: Vm, server: Server = None) -> str:
         """
         :param vm:
         :param server:
@@ -75,16 +75,29 @@ class State:
         if server:
             node = server.deploy_vm(vm)
             self._vms[vm.id_] = vm
-            return server, node
+            return node
 
+        test_time = 0
         for s in self.servers:
-            try:
-                node = s.deploy_vm(vm)
+            node = s.deploy_vm(vm)
+            test_time += 1
+            if node != 'F':
                 self._vms[vm.id_] = vm
-                return s, node
-            except MyException:
+                return node
+            elif test_time < 10:
+                # 只尝试10次，越靠后的越不可能容纳下虚拟机
                 continue
-        raise MyException('Failed to deploy on the exist server, new server required')
+            else:
+                break
+        # raise MyException('Failed to deploy on the exist server, new server required')
+        return 'F'
+
+    def sort_server_by_memory(self):
+        """
+        Sort the server by available memory
+        :return:
+        """
+        self.servers.sort(key=Server.get_round_available_memory, reverse=True)
 
     def free_vm(self, id_: int):
         """
@@ -125,6 +138,12 @@ class State:
         for s in self._server_types:
             if s.can_deploy_vm(vm_type):
                 return s
+
+    def total_server_expense(self) -> Tuple[int, int]:
+        total = 0
+        for server in self.servers:
+            total += server.type_.price
+        return total, len(self.servers)
 
 
 state = State()

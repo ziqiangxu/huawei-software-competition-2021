@@ -1,7 +1,7 @@
 from typing import Dict
-import logging
+# import logging
 
-from public import MyException
+# from public import MyException
 
 
 class VmType:
@@ -114,6 +114,13 @@ class Server:
         self._vms_a: Dict[int, Vm] = {}
         self._vms_b: Dict[int, Vm] = {}
 
+    def get_round_available_memory(self):
+        """
+        获取大约可用的内存（目前使用b节点的可用内存代替）
+        :return:
+        """
+        return self.type_.memory // 2 - self._memory_used_b
+
     def free_vm(self, vm: Vm):
         """
         释放资源，然后从列表中删除对象
@@ -138,7 +145,8 @@ class Server:
             self._memory_used_b -= type_.memory
             self._core_used_b -= type_.core_num
         else:
-            raise MyException('Unexpected node')
+            # raise MyException('Unexpected node')
+            raise NotImplementedError()
         vm_table.pop(vm.id_)
 
     @property
@@ -152,28 +160,30 @@ class Server:
 
     def deploy_vm(self, vm: Vm) -> str:
         """
-        D双节点，A节点，B节点
+        D双节点，A节点，B节点, F失败
         :param vm:
         :return:
         """
-        logging.debug(f'Deploying a vm: {vm}')
+        # logging.debug(f'Deploying a vm: {vm}')
         if vm.type_.is_double:
-            self._deploy_vm_double(vm)
-            vm.deployed_to(self, 'D')
-            return 'D'
+            if self._deploy_vm_double(vm):
+                vm.deployed_to(self, 'D')
+                return 'D'
+            else:
+                return 'F'
         else:
             # Try node A
-            try:
-                self._deploy_vm_a(vm)
+            if self._deploy_vm_a(vm):
                 vm.deployed_to(self, 'A')
                 return 'A'
-            except MyException:
-                # Try node B
-                self._deploy_vm_b(vm)
+            # Try node B
+            elif self._deploy_vm_b(vm):
                 vm.deployed_to(self, 'B')
                 return 'B'
+            else:
+                return 'F'
 
-    def _deploy_vm_double(self, vm: Vm):
+    def _deploy_vm_double(self, vm: Vm) -> bool:
         core = vm.type_.core_num
         mem = vm.type_.memory
         node_memory = self.type_.memory // 2
@@ -182,9 +192,11 @@ class Server:
         half_mem = mem // 2
         half_core = core // 2
         if (self._memory_used_a + half_mem) > node_memory or (self._memory_used_b + half_mem) > node_memory:
-            raise MyException('Memory used out')
+            # raise MyException('Memory used out')
+            return False
         if (self._core_used_a + half_core) > node_core or (self._core_used_b + half_core) > node_core:
-            raise MyException('Core used out')
+            # raise MyException('Core used out')
+            return False
         # Success to deploy
         self._memory_used_a += half_mem
         self._memory_used_b += half_mem
@@ -193,18 +205,20 @@ class Server:
         self._vms_double[vm.id_] = vm
         return True
 
-    def _deploy_vm_a(self, vm: Vm):
+    def _deploy_vm_a(self, vm: Vm) -> bool:
         core = vm.type_.core_num
         mem = vm.type_.memory
         node_memory = self.type_.memory // 2
         node_core = int(self.type_.core_num // 2)
 
         if (self._memory_used_a + mem) > node_memory or (self._core_used_a + core) > node_core:
-            raise MyException('Failed to deploy on node A')
+            # raise MyException('Failed to deploy on node A')
+            return False
 
         self._memory_used_a += mem
         self._core_used_a += core
         self._vms_a[vm.id_] = vm
+        return True
 
     def _deploy_vm_b(self, vm: Vm):
         core = vm.type_.core_num
@@ -213,8 +227,10 @@ class Server:
         node_core = int(self.type_.core_num // 2)
 
         if (self._memory_used_b + mem) > node_memory or (self._core_used_b + core) > node_core:
-            raise MyException('Failed to deploy on node B')
+            # raise MyException('Failed to deploy on node B')
+            return False
 
         self._memory_used_b += mem
         self._core_used_b += core
         self._vms_b[vm.id_] = vm
+        return True

@@ -1,9 +1,9 @@
 from typing import List
-import logging
+# import logging
 import sys
 
 from device import ServerType, VmType, Vm
-from store import state, MyException
+from store import state
 
 
 class Request:
@@ -64,9 +64,11 @@ class Dispatcher:
         for r in add_request:
             vm = Vm(r.vm_type, r.id_)
             deploy_record.append(vm)
-            try:
-                server, node = state.deploy_vm(vm)
-            except MyException:
+
+            node = state.deploy_vm(vm)
+
+            # except MyException:
+            if node == 'F':
                 # 采购服务器
                 server_type = top_server_type
                 if server_type.can_deploy_vm(vm.type_):
@@ -77,9 +79,13 @@ class Dispatcher:
                 server_list = planed_server.get(server_type.server_model, [])
                 server_list.append(server)
                 planed_server[server_type.server_model] = server_list
-                server, node = state.deploy_vm(vm, server)
+                # 新的服务器，一定可以部署这个虚拟机
+                _ = state.deploy_vm(vm, server)
 
         # #### 扩容
+
+        # #### 对服务器进行整理，方便下次更快进行检索
+        state.sort_server_by_memory()
 
         # >>> 输出
         # 扩容
@@ -97,11 +103,6 @@ class Dispatcher:
             else:
                 sys.stdout.write(f'({vm.server.id_}, {vm.node})\n')
         # <<< 输出
-
         # ### 部署虚拟机
         # 先放大的，再放小的
-        logging.debug(add_request)
-
-    def del_vm(self, id_: int):
-        # TODO
-        pass
+        # logging.debug(add_request)

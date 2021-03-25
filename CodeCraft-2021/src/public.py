@@ -11,6 +11,7 @@ def log(msg):
     sys.stderr.write(f'{msg}\n')
 
 
-class MyException(Exception):
-    def __init__(self, msg: str):
-        super().__init__(msg)
+# class MyException(Exception):
+#     # 过多的异常耗时较长
+#     def __init__(self, msg: str):
+#         super().__init__(msg)
