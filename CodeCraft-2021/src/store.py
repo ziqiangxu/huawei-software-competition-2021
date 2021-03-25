@@ -78,17 +78,12 @@ class State:
             return node
 
         test_time = 0
-        for s in self.servers:
+        for s in self.servers[-5:]:
             node = s.deploy_vm(vm)
             test_time += 1
             if node != 'F':
                 self._vms[vm.id_] = vm
                 return node
-            elif test_time < 10:
-                # 只尝试10次，越靠后的越不可能容纳下虚拟机
-                continue
-            else:
-                break
         # raise MyException('Failed to deploy on the exist server, new server required')
         return 'F'
 

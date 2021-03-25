@@ -47,9 +47,9 @@ def main():
                 add_request.append(req)
             request_count += 1
         dispatcher.handle_requests(del_request, add_request)
-        if day > 400:
-            # 只处理部分的请求，进行测试
-            break
+        # if day > 400:
+        #     # 只处理部分的请求，进行测试
+        #     break
     # logging.info(f'{request_count} requests has been handled')
     sys.stdout.flush()
 
@@ -64,8 +64,8 @@ if __name__ == "__main__":
     # logging.basicConfig(level=logging.DEBUG)
     # logging.basicConfig(level=logging.INFO)
     # logging.basicConfig(level=logging.ERROR)
-    start = time.time()
+    # start = time.time()
 
     main()
 
-    compute_cost(start)
+    # compute_cost(start)

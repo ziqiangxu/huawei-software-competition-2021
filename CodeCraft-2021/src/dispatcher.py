@@ -85,7 +85,7 @@ class Dispatcher:
         # #### 扩容
 
         # #### 对服务器进行整理，方便下次更快进行检索
-        state.sort_server_by_memory()
+        # state.sort_server_by_memory()
 
         # >>> 输出
         # 扩容
