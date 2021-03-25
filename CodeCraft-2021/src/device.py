@@ -1,4 +1,4 @@
-from typing import List
+from typing import Dict
 import logging
 
 from public import MyException
@@ -36,14 +36,23 @@ class Vm:
     """
     虚拟机，为每个虚拟机创建一个VM对象
     """
-
     def __init__(self, type_: VmType, id_: int):
         """
         (vm38TGB, 124, 2, 1)\n
         """
         self.type_ = type_
         self.id_ = id_
-        # TODO
+        self.server = None
+        self.node = ''  # D, A, B where the vm be deployed
+
+    def deployed_to(self, server, node: str):
+        """
+        :param server: Server, deploy the vm to a server
+        :param node:
+        :return:
+        """
+        self.server = server
+        self.node = node
 
 
 class ServerType:
@@ -101,29 +110,68 @@ class Server:
         self._core_used_b = 0
         self._up = False  # False为关机状态
         self._id: int = -1  # 只有采购之后才会分配id, -1表示在购买计划中
-        self._vms_double: List[Vm] = []
-        self._vms_a: List[Vm] = []
-        self._vms_b: List[Vm] = []
+        self._vms_double: Dict[int, Vm] = {}
+        self._vms_a: Dict[int, Vm] = {}
+        self._vms_b: Dict[int, Vm] = {}
+
+    def free_vm(self, vm: Vm):
+        """
+        释放资源，然后从列表中删除对象
+        :param vm:
+        :return:
+        """
+        type_ = vm.type_
+        if 'D' == vm.node:
+            vm_table = self._vms_double
+            half_mem = type_.memory // 2
+            self._memory_used_a -= half_mem
+            self._memory_used_b -= half_mem
+            half_core = type_.core_num // 2
+            self._core_used_a -= half_core
+            self._core_used_b -= half_core
+        elif 'A' == vm.node:
+            vm_table = self._vms_a
+            self._memory_used_a -= type_.memory
+            self._core_used_a -= type_.core_num
+        elif 'B' == vm.node:
+            vm_table = self._vms_b
+            self._memory_used_b -= type_.memory
+            self._core_used_b -= type_.core_num
+        else:
+            raise MyException('Unexpected node')
+        vm_table.pop(vm.id_)
 
     @property
     def id_(self):
+        assert self._id != -1
         return self._id
 
     @id_.setter
     def id_(self, value):
         self._id = value
 
-    def deploy_vm(self, vm: Vm):
+    def deploy_vm(self, vm: Vm) -> str:
+        """
+        D双节点，A节点，B节点
+        :param vm:
+        :return:
+        """
         logging.debug(f'Deploying a vm: {vm}')
         if vm.type_.is_double:
             self._deploy_vm_double(vm)
+            vm.deployed_to(self, 'D')
+            return 'D'
         else:
             # Try node A
             try:
                 self._deploy_vm_a(vm)
+                vm.deployed_to(self, 'A')
+                return 'A'
             except MyException:
                 # Try node B
                 self._deploy_vm_b(vm)
+                vm.deployed_to(self, 'B')
+                return 'B'
 
     def _deploy_vm_double(self, vm: Vm):
         core = vm.type_.core_num
@@ -142,8 +190,7 @@ class Server:
         self._memory_used_b += half_mem
         self._core_used_a += half_core
         self._core_used_b += half_core
-        self._vms_double.append(vm)
-        # TODO output to std
+        self._vms_double[vm.id_] = vm
         return True
 
     def _deploy_vm_a(self, vm: Vm):
@@ -157,8 +204,7 @@ class Server:
 
         self._memory_used_a += mem
         self._core_used_a += core
-        self._vms_a.append(vm)
-        # TODO output to std
+        self._vms_a[vm.id_] = vm
 
     def _deploy_vm_b(self, vm: Vm):
         core = vm.type_.core_num
@@ -171,5 +217,4 @@ class Server:
 
         self._memory_used_b += mem
         self._core_used_b += core
-        self._vms_b.append(vm)
-        # TODO output to std
+        self._vms_b[vm.id_] = vm

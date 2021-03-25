@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 
 from device import *
 
@@ -12,8 +12,9 @@ class State:
         self._server_types_hash = {}
         self._vm_types: List[VmType] = []
         self._vm_types_hash = {}
+        # TODO 优化选择服务器的策略，和查找可用服务器的算法
         self.servers: List[Server] = []
-        self.vms: List[Vm] = []
+        self._vms: Dict[int, Vm] = {}  # 以虚拟机id为key
         self._server_num = -1
 
     @property
@@ -65,23 +66,36 @@ class State:
         """
         return self._server_types[0]
 
-    def deploy_vm(self, vm: Vm, server: Server = None):
+    def deploy_vm(self, vm: Vm, server: Server = None) -> Tuple[Server, str]:
         """
         :param vm:
         :param server:
-        :return:
+        :return: server and which node the vm deploy
         """
         if server:
-            server.deploy_vm(vm)
-            return
+            node = server.deploy_vm(vm)
+            self._vms[vm.id_] = vm
+            return server, node
 
         for s in self.servers:
             try:
-                s.deploy_vm(vm)
-                return
+                node = s.deploy_vm(vm)
+                self._vms[vm.id_] = vm
+                return s, node
             except MyException:
                 continue
         raise MyException('Failed to deploy on the exist server, new server required')
+
+    def free_vm(self, id_: int):
+        """
+        # TODO 根据给定的
+        释放某个虚拟机
+        :param id_: id of the vm
+        :return:
+        """
+        vm: Vm = self._vms.pop(id_)
+        server = vm.server
+        server.free_vm(vm)
 
     def plan_server(self, type_: ServerType):
         """

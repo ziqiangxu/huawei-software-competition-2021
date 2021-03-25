@@ -13,19 +13,23 @@ class Request:
     def __init__(self, request: str):
         self.action: int
         self.id_: int
-        self.vm_type: VmType
+        self._vm_type: VmType
         res = request[1: -2].split(',')
         if request[1] == 'a':
             # (add, vmUU5F0, 748984173)\n
             self.action = self.ADD
             self.id_ = int(res[2])
-            self.vm_type = state.get_vm_type(res[1])
+            self._vm_type = state.get_vm_type(res[1])
         elif request[1] == 'd':
             # (del, 617495014)\n
             self.action = self.DEL
             self.id_ = int(res[1])
         else:
             raise NotImplementedError
+
+    @property
+    def vm_type(self) -> VmType:
+        return self._vm_type
 
     def get_vm_model(self):
         t: VmType = self.vm_type
@@ -48,20 +52,20 @@ class Dispatcher:
         """
         # TODO 对于一批请求，需要进行采购，分配
 
-        # # 销毁虚拟机
+        # #### 销毁虚拟机
         for r in del_requests:
-            # TODO free the resources
-            pass
+            state.free_vm(r.id_)
 
         # 对虚拟机按照内存从小到大排序，并计划需要购买的机器
         add_request.sort(key=Request.get_vm_model)
         planed_server = {}
-        server_count = 0
         top_server_type = state.get_top_memory_server_type()
+        deploy_record = []
         for r in add_request:
             vm = Vm(r.vm_type, r.id_)
+            deploy_record.append(vm)
             try:
-                state.deploy_vm(vm)
+                server, node = state.deploy_vm(vm)
             except MyException:
                 # 采购服务器
                 server_type = top_server_type
@@ -71,30 +75,33 @@ class Dispatcher:
                     server_type = state.find_server_type_for_vm(vm.type_)
                     server = state.plan_server(server_type)
                 server_list = planed_server.get(server_type.server_model, [])
-                server_count += 1
                 server_list.append(server)
                 planed_server[server_type.server_model] = server_list
-                state.deploy_vm(vm, server)
+                server, node = state.deploy_vm(vm, server)
 
-        # # 扩容
-        # TODO 统计purchased_server, 输出
-        sys.stdout.write(f'(purchase, {server_count})')
-        for server_model, server_list in planed_server.items():
+        # #### 扩容
+
+        # >>> 输出
+        # 扩容
+        sys.stdout.write(f'(purchase, {len(planed_server)})\n')
+        for key_model, value_list in planed_server.items():
             # 购买若干台
-            sys.stdout.write(f'({server_model}, {len(server_list)})\n')
-            state.install_server(server_list)
-
-        # # 迁移虚拟机
+            sys.stdout.write(f'({key_model}, {len(value_list)})\n')
+            state.install_server(value_list)
+        # 迁移虚拟机
         sys.stdout.write(f'(migration, 0)\n')
+        # 部署
+        for vm in deploy_record:
+            if vm.type_.is_double:
+                sys.stdout.write(f'({vm.server.id_})\n')
+            else:
+                sys.stdout.write(f'({vm.server.id_}, {vm.node})\n')
+        # <<< 输出
 
-        # # 部署虚拟机
+        # ### 部署虚拟机
         # 先放大的，再放小的
         logging.debug(add_request)
 
     def del_vm(self, id_: int):
-        # TODO
-        pass
-
-    def add_vm(self, type_: VmType, id_: int):
         # TODO
         pass

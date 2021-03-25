@@ -47,20 +47,16 @@ def main():
                 add_request.append(req)
             request_count += 1
         dispatcher.handle_requests(del_request, add_request)
-        if day > 10:
-            # 只处理5天的请求，进行测试
-            break
+        # if day > 30:
+        #     # 只处理5天的请求，进行测试
+        #     break
     logging.info(f'{request_count} requests has been handled')
-
-    # to write standard output
-    sys.stdout.write('hello, here will be the output\n')
     sys.stdout.flush()
-    pass
 
 
 if __name__ == "__main__":
     # logging.basicConfig(level=logging.DEBUG)
-    logging.basicConfig(level=logging.INFO)
+    # logging.basicConfig(level=logging.INFO)
     # logging.basicConfig(level=logging.ERROR)
     start = time.time()
     main()
