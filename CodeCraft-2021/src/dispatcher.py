@@ -1,5 +1,6 @@
 from typing import List
 import logging
+import sys
 
 from device import ServerType, VmType, Vm
 from store import state, MyException
@@ -51,29 +52,40 @@ class Dispatcher:
         for r in del_requests:
             # TODO free the resources
             pass
-        # # 迁移虚拟机
 
         # 对虚拟机按照内存从小到大排序，并计划需要购买的机器
         add_request.sort(key=Request.get_vm_model)
-        purchased_server = []
+        planed_server = {}
+        server_count = 0
         top_server_type = state.get_top_memory_server_type()
         for r in add_request:
             vm = Vm(r.vm_type, r.id_)
             try:
                 state.deploy_vm(vm)
             except MyException:
-                if top_server_type.can_deploy_vm(vm.type_):
-                    server = state.purchase_server(top_server_type)
+                # 采购服务器
+                server_type = top_server_type
+                if server_type.can_deploy_vm(vm.type_):
+                    server = state.plan_server(server_type)
                 else:
                     server_type = state.find_server_type_for_vm(vm.type_)
-                    server = state.purchase_server(server_type)
-                purchased_server.append(server)
+                    server = state.plan_server(server_type)
+                server_list = planed_server.get(server_type.server_model, [])
+                server_count += 1
+                server_list.append(server)
+                planed_server[server_type.server_model] = server_list
                 state.deploy_vm(vm, server)
 
         # # 扩容
         # TODO 统计purchased_server, 输出
-        logging.info(f'{len(purchased_server)} servers cost '
-                     f'{len(purchased_server) * top_server_type.price / 1000}k')
+        sys.stdout.write(f'(purchase, {server_count})')
+        for server_model, server_list in planed_server.items():
+            # 购买若干台
+            sys.stdout.write(f'({server_model}, {len(server_list)})\n')
+            state.install_server(server_list)
+
+        # # 迁移虚拟机
+        sys.stdout.write(f'(migration, 0)\n')
 
         # # 部署虚拟机
         # 先放大的，再放小的

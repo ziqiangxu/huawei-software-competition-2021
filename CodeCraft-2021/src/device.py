@@ -90,10 +90,9 @@ class Server:
     服务器，为每个采购的服务器创建一个Server对象
     """
 
-    def __init__(self, type_: ServerType, id_: int):
+    def __init__(self, type_: ServerType):
         """
         :param type_: 服务器类型
-        :param id_: 服务器id
         """
         self.type_ = type_
         self._memory_used_a = 0
@@ -101,13 +100,21 @@ class Server:
         self._core_used_a = 0
         self._core_used_b = 0
         self._up = False  # False为关机状态
-        self._id = id_
+        self._id: int = -1  # 只有采购之后才会分配id, -1表示在购买计划中
         self._vms_double: List[Vm] = []
         self._vms_a: List[Vm] = []
         self._vms_b: List[Vm] = []
 
+    @property
+    def id_(self):
+        return self._id
+
+    @id_.setter
+    def id_(self, value):
+        self._id = value
+
     def deploy_vm(self, vm: Vm):
-        logging.info(f'Deploying a vm: {vm}')
+        logging.debug(f'Deploying a vm: {vm}')
         if vm.type_.is_double:
             self._deploy_vm_double(vm)
         else:

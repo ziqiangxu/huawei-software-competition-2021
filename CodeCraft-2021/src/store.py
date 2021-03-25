@@ -14,6 +14,7 @@ class State:
         self._vm_types_hash = {}
         self.servers: List[Server] = []
         self.vms: List[Vm] = []
+        self._server_num = -1
 
     @property
     def server_types(self):
@@ -82,15 +83,24 @@ class State:
                 continue
         raise MyException('Failed to deploy on the exist server, new server required')
 
-    def purchase_server(self, type_: ServerType):
+    def plan_server(self, type_: ServerType):
         """
         :param type_:
         :return:
         """
-        id_ = len(self.servers)
-        server = Server(type_, id_)
+        server = Server(type_)
         self.servers.append(server)
         return server
+
+    def install_server(self, server_list: List[Server]):
+        """
+        购买来了服务器，对服务器进行安装编号
+        :param server_list: 服务器列表
+        :return:
+        """
+        for server in server_list:
+            self._server_num += 1
+            server.id_ = self._server_num
 
     def find_server_type_for_vm(self, vm_type: VmType) -> ServerType:
         """
