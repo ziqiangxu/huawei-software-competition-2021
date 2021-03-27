@@ -81,7 +81,7 @@ class State:
             return node
 
         # TODO 尝试的服务器越多则越慢，利用率更高
-        for s in self.servers[-150:]:
+        for s in self.servers[-300:]:
             # node = s.deploy_vm(vm)
             # 使用更优的部署函数
             node = s.proper_deploy_vm(vm)
@@ -97,6 +97,13 @@ class State:
         :return:
         """
         self.servers.sort(key=Server.get_round_available_memory, reverse=True)
+
+    def sort_server(self):
+        """
+        对服务器进行排名
+        :return:
+        """
+        self.servers.sort(key=Server.get_rank)
 
     def del_vm(self, id_: int):
         """

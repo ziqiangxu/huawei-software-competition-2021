@@ -55,6 +55,6 @@ if __name__ == "__main__":
 
     main()
 
-    time_cost = time.time() - start
-    state.statistic()
-    print(f'Total time cost: {time_cost}')
+    # time_cost = time.time() - start
+    # state.statistic()
+    # print(f'Total time cost: {time_cost}')

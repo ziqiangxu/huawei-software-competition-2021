@@ -184,6 +184,15 @@ class Server:
         warnings.warn('', DeprecationWarning)
         return self.type_.memory // 2 - self._memory_used_b
 
+    def get_rank(self):
+        """
+        获取服务器排名分数
+        :return:
+        """
+        a, b = self.get_available_memory()
+        c, d = self.get_available_core()
+        return a + b + c + d
+
     def get_available_memory(self):
         node_memory = self.type_.memory // 2
         return node_memory - self._memory_used_a, node_memory - self._memory_used_b
