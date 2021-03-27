@@ -54,7 +54,6 @@ class Dispatcher:
         # add_request.sort(key=Request.get_vm_model)
 
         planed_server = {}
-        top_server_type = state.get_top_memory_server_type()
         deploy_record = []
         for r in requests:
             if Request.DEL == r.action:
@@ -69,12 +68,8 @@ class Dispatcher:
             # except MyException:
             if node == 'F':
                 # 采购服务器
-                server_type = top_server_type
-                if server_type.can_deploy_vm(vm.type_):
-                    server = state.plan_server(server_type)
-                else:
-                    server_type = state.find_server_type_for_vm(vm.type_)
-                    server = state.plan_server(server_type)
+                server_type = state.find_server_type_for_vm(vm.type_)
+                server = state.plan_server(server_type)
                 server_list = planed_server.get(server_type.server_model, [])
                 server_list.append(server)
                 planed_server[server_type.server_model] = server_list

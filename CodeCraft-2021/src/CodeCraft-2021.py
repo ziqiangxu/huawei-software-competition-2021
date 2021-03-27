@@ -47,12 +47,6 @@ def main():
     sys.stdout.flush()
 
 
-def compute_cost(start):
-    expense = state.total_server_expense()
-    print(f'Total time cost: {time.time() - start}, '
-          f'{expense[1]} servers installed and have cost: {expense[0] / 1000000000} Billion\n')
-
-
 if __name__ == "__main__":
     # logging.basicConfig(level=logging.DEBUG)
     # logging.basicConfig(level=logging.INFO)
@@ -61,4 +55,6 @@ if __name__ == "__main__":
 
     main()
 
-    compute_cost(start)
+    # time_cost = time.time() - start
+    # state.statistic()
+    # print(f'Total time cost: {time_cost}')

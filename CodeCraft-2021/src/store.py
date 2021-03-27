@@ -37,9 +37,11 @@ class State:
 
     @vm_types.setter
     def vm_types(self, types: List[VmType]):
+        assert self.server_types
         for t in types:
             key = t.vm_model.strip()
             self._vm_types_hash[key] = t
+            t.find_prefer_server(self.server_types)
         self._vm_types = types
 
     def get_vm_type(self, vm_model: str):
@@ -79,7 +81,7 @@ class State:
             return node
 
         test_time = 0
-        for s in self.servers[-5:]:
+        for s in self.servers[-40:]:
             node = s.deploy_vm(vm)
             test_time += 1
             if node != 'F':
@@ -131,15 +133,25 @@ class State:
         :param vm_type:
         :return:
         """
+        if vm_type.prefer_server:
+            return vm_type.prefer_server[0]
+
         for s in self._server_types:
             if s.can_deploy_vm(vm_type):
                 return s
 
-    def total_server_expense(self) -> Tuple[int, int]:
+    def statistic(self):
+
         total = 0
         for server in self.servers:
-            total += server.type_.price
-        return total, len(self.servers)
+            type_ = server.type_
+            total += type_.price
+            mem_a, mem_b = server.get_available_memory()
+            core_a, core_b = server.get_available_core()
+            print(f'total: ({type_.core_num}C, {type_.memory}G); '
+                  f'available a: ({core_a}C, {mem_a}G), b: ({core_b}C, {mem_b}G)'
+                  f'mem_core_ratio: {type_.get_mem_core_ratio() : .3f}')
+        print(f'{len(self.servers)} servers installed and have cost: {total / 1000000000} Billion\n')
 
 
 state = State()

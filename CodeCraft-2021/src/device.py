@@ -1,7 +1,13 @@
-from typing import Dict
+import warnings
+from typing import Dict, List
+
+
 # import logging
 
 # from public import MyException
+THRESHOLD_TYPE = 4
+TYPE_COMPUTE = 0
+TYPE_MEMORY = 1
 
 
 class VmType:
@@ -18,6 +24,10 @@ class VmType:
         self.vm_model = res[0]
         self.core_num = int(res[1])
         self.memory = int(res[2])
+        if (self.memory / self.core_num) < THRESHOLD_TYPE:
+            self.device_type = TYPE_COMPUTE
+        else:
+            self.device_type = TYPE_MEMORY
 
         # 是否双节点部署
         if res[3] == ' 1' or res[3] == '1':
@@ -25,11 +35,92 @@ class VmType:
         else:
             self.is_double = False
 
+        self._prefer_server: List[ServerType] = []
+
+    @property
+    def prefer_server(self):
+        return self._prefer_server
+
+    def find_prefer_server(self, server_types: List):
+        for type_ in server_types:
+            type_: ServerType
+            if type_.can_deploy_vm(self):
+                if 2 > type_.mem_core_ratio > 0.5:
+                    self._prefer_server.append(type_)
+        return
+
+        # TODO 还需要再斟酌，这样可能会造成空间的浪费
+        self._prefer_server.sort(key=ServerType.get_price_index)
+        return
+
+        # TODO 还需要再斟酌，这样可能会造成空间的浪费
+        if self.device_type == TYPE_COMPUTE:
+            # 计算型虚拟机则选择计算型服务器
+            self._prefer_server.sort(key=ServerType.get_mem_core_ratio)
+        elif self.device_type == TYPE_MEMORY:
+            self._prefer_server.sort(key=ServerType.get_mem_core_ratio, reverse=True)
+        return
+
     def __str__(self):
         return f'vm model: {self.vm_model}, ' \
                f'core num: {self.core_num}, ' \
                f'memory: {self.memory}, ' \
                f'is double: {self.is_double}'
+
+
+class ServerType:
+    """
+    服务器类型
+    """
+
+    def __init__(self, info: str):
+        """
+        (型号, CPU 核数, 内存大小, 硬件成本, 每日能耗成本
+        example of the info: (host0Y6DP, 300, 830, 141730, 176)\n
+        """
+        res = info[1:-2].split(',')
+        self.server_model = res[0]
+        self.core_num = int(res[1])
+        self.memory = int(res[2])
+        self.price = int(res[3])
+        self.energy_cost = int(res[4])
+        self.mem_core_ratio = self.memory / self.core_num  # 按值的大小分为: 0-4计算型， >4存储型
+        # 通过对80个服务器进行数据相关性分析得：
+        # price_pre = 219 x core + 104 x mem
+        # 1000 * energy_pre = 275 x core + 130 x mem
+        # 后期基于服务器价格排名
+        price_pre = self.price - 219 * self.core_num + 104 * self.memory
+        self.price_index = (self.price - price_pre) / price_pre  # 价格的偏离程度，此指数越小越好
+        # 前期基于能耗排名
+        energy_pre = 275 * self.core_num + 130 * self.memory
+        self.energy_index = (self.energy_cost - energy_pre) / energy_pre  # 能耗的偏离程度，此指数越小越好
+
+    def get_price_index(self):
+        return self.price_index
+
+    def get_mem_core_ratio(self):
+        return self.mem_core_ratio
+
+    def get_memory(self):
+        return self.memory
+
+    def can_deploy_vm(self, vm_type: VmType):
+        """
+        判断是否可以部署某种类型的虚拟机
+        :param vm_type:
+        :return:
+        """
+        if vm_type.is_double:
+            return self.core_num >= vm_type.core_num and self.memory >= vm_type.memory
+        else:
+            return self.core_num // 2 >= vm_type.core_num and self.memory // 2 >= vm_type.memory
+
+    def __str__(self):
+        return f'server model：{self.server_model}, ' \
+               f'core num：{self.core_num}, ' \
+               f'memory: {self.memory}, ' \
+               f'price: {self.price}, ' \
+               f'energy_cost: {self.energy_cost}'
 
 
 class Vm:
@@ -53,54 +144,6 @@ class Vm:
         """
         self.server = server
         self.node = node
-
-
-class ServerType:
-    """
-    服务器类型
-    """
-
-    def __init__(self, info: str):
-        """
-        (型号, CPU 核数, 内存大小, 硬件成本, 每日能耗成本
-        example of the info: (host0Y6DP, 300, 830, 141730, 176)\n
-        """
-        res = info[1:-2].split(',')
-        self.server_model = res[0]
-        self.core_num = int(res[1])
-        self.memory = int(res[2])
-        self.price = int(res[3])
-        self.energy_cost = int(res[4])
-        # 通过对80个服务器进行数据相关性分析得：
-        # price_pre = 219 x core + 104 x mem
-        # 1000 * energy_pre = 275 x core + 130 x mem
-        # 后期基于服务器价格排名
-        price_pre = self.price - 219 * self.core_num + 104 * self.memory
-        self.price_index = (self.price - price_pre) / price_pre  # 价格的偏离程度，此指数越小越好
-        # 前期基于能耗排名
-        energy_pre = 275 * self.core_num + 130 * self.memory
-        self.energy_index = (self.energy_cost - energy_pre) / energy_pre  # 能耗的偏离程度，此指数越小越好
-
-    def get_memory(self):
-        return self.memory
-
-    def can_deploy_vm(self, vm_type: VmType):
-        """
-        判断是否可以部署某种类型的虚拟机
-        :param vm_type:
-        :return:
-        """
-        if vm_type.is_double:
-            return self.core_num >= vm_type.core_num and self.memory >= vm_type.memory
-        else:
-            return self.core_num // 2 >= vm_type.core_num and self.memory // 2 >= vm_type.memory
-
-    def __str__(self):
-        return f'server model：{self.server_model}, ' \
-               f'core num：{self.core_num}, ' \
-               f'memory: {self.memory}, ' \
-               f'price: {self.price}, ' \
-               f'energy_cost: {self.energy_cost}'
 
 
 class Server:
@@ -128,7 +171,16 @@ class Server:
         获取大约可用的内存（目前使用b节点的可用内存代替）
         :return:
         """
+        warnings.warn('', DeprecationWarning)
         return self.type_.memory // 2 - self._memory_used_b
+
+    def get_available_memory(self):
+        node_memory = self.type_.memory // 2
+        return node_memory - self._memory_used_a, node_memory - self._memory_used_b
+
+    def get_available_core(self):
+        node_core = self.type_.core_num // 2
+        return node_core - self._core_used_a, node_core - self._core_used_b
 
     def free_vm(self, vm: Vm):
         """
@@ -169,6 +221,7 @@ class Server:
 
     def deploy_vm(self, vm: Vm) -> str:
         """
+        不考虑服务器的结构
         D双节点，A节点，B节点, F失败
         :param vm:
         :return:
@@ -189,6 +242,14 @@ class Server:
                 vm.deployed_to(self, 'B')
                 return 'B'
             return 'F'
+
+    def proper_deploy_vm(self, vm: Vm):
+        """
+        TODO 查看服务器的内存和核心结构，如果不合适则不进行部署
+        :param vm:
+        :return:
+        """
+        pass
 
     def _deploy_vm_double(self, vm: Vm) -> bool:
         half_core = vm.type_.core_num // 2
