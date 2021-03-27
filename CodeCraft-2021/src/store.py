@@ -80,10 +80,11 @@ class State:
             self._vms[vm.id_] = vm
             return node
 
-        test_time = 0
-        for s in self.servers[-40:]:
-            node = s.deploy_vm(vm)
-            test_time += 1
+        # TODO 尝试的服务器越多则越慢，利用率更高
+        for s in self.servers[-150:]:
+            # node = s.deploy_vm(vm)
+            # 使用更优的部署函数
+            node = s.proper_deploy_vm(vm)
             if node != 'F':
                 self._vms[vm.id_] = vm
                 return node

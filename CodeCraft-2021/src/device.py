@@ -6,8 +6,12 @@ from typing import Dict, List
 
 # from public import MyException
 THRESHOLD_TYPE = 4
+THRESHOLD_TYPE_RE = 1 / THRESHOLD_TYPE
+THRESHOLD_SERVER_CONVERT = 5
+THRESHOLD_SERVER_CONVERT_RE = 1 / THRESHOLD_SERVER_CONVERT
 TYPE_COMPUTE = 0
-TYPE_MEMORY = 1
+TYPE_BALANCE = 1
+TYPE_MEMORY = 2
 
 
 class VmType:
@@ -24,10 +28,12 @@ class VmType:
         self.vm_model = res[0]
         self.core_num = int(res[1])
         self.memory = int(res[2])
-        if (self.memory / self.core_num) < THRESHOLD_TYPE:
+        if (self.memory / self.core_num) < THRESHOLD_TYPE_RE:
             self.device_type = TYPE_COMPUTE
-        else:
+        elif (self.memory / self.core_num) > THRESHOLD_TYPE:
             self.device_type = TYPE_MEMORY
+        else:
+            self.device_type = TYPE_BALANCE
 
         # 是否双节点部署
         if res[3] == ' 1' or res[3] == '1':
@@ -45,13 +51,13 @@ class VmType:
         for type_ in server_types:
             type_: ServerType
             if type_.can_deploy_vm(self):
-                if 2 > type_.mem_core_ratio > 0.5:
+                if 2 > type_.mem_core_ratio > 1:
                     self._prefer_server.append(type_)
-        return
+                # self._prefer_server.append(type_)
+
+        # return
 
         # TODO 还需要再斟酌，这样可能会造成空间的浪费
-        self._prefer_server.sort(key=ServerType.get_price_index)
-        return
 
         # TODO 还需要再斟酌，这样可能会造成空间的浪费
         if self.device_type == TYPE_COMPUTE:
@@ -59,6 +65,8 @@ class VmType:
             self._prefer_server.sort(key=ServerType.get_mem_core_ratio)
         elif self.device_type == TYPE_MEMORY:
             self._prefer_server.sort(key=ServerType.get_mem_core_ratio, reverse=True)
+        # elif self.device_type == TYPE_BALANCE:
+        #     self._prefer_server.sort(key=ServerType.get_price_index, reverse=False)
         return
 
     def __str__(self):
@@ -81,7 +89,9 @@ class ServerType:
         res = info[1:-2].split(',')
         self.server_model = res[0]
         self.core_num = int(res[1])
+        self.half_core = self.core_num // 2
         self.memory = int(res[2])
+        self.half_memory = self.memory // 2
         self.price = int(res[3])
         self.energy_cost = int(res[4])
         self.mem_core_ratio = self.memory / self.core_num  # 按值的大小分为: 0-4计算型， >4存储型
@@ -229,27 +239,63 @@ class Server:
         # logging.debug(f'Deploying a vm: {vm}')
         if vm.type_.is_double:
             if self._deploy_vm_double(vm):
-                vm.deployed_to(self, 'D')
                 return 'D'
             return 'F'
         else:
             # Try node A
             if self._deploy_vm_a(vm):
-                vm.deployed_to(self, 'A')
                 return 'A'
             # Try node B
             if self._deploy_vm_b(vm):
-                vm.deployed_to(self, 'B')
                 return 'B'
             return 'F'
 
-    def proper_deploy_vm(self, vm: Vm):
+    def proper_deploy_vm(self, vm: Vm) -> str:
         """
         TODO 查看服务器的内存和核心结构，如果不合适则不进行部署
+        D双节点，A节点，B节点, F失败
         :param vm:
         :return:
         """
-        pass
+        vm_type = vm.type_
+        if vm_type.is_double:
+            # TODO 还没有对双节点部署优化
+            return self.deploy_vm(vm)
+        else:
+            if self._proper_deploy_vm_a(vm):
+                return 'A'
+            elif self._proper_deploy_vm_b(vm):
+                return 'B'
+            return 'F'
+
+    def _proper_deploy_vm_b(self, vm: Vm) -> bool:
+        mem = self.type_.half_memory - self._memory_used_b
+        core = self.type_.half_core - self._core_used_b
+        if mem == 0 or core == 0:
+            return False
+        vm_type = vm.type_
+        if mem / core > THRESHOLD_SERVER_CONVERT and vm_type.device_type == TYPE_MEMORY:
+            return False
+        # 计算型服务器不接收存储型的虚拟机了
+        elif mem / core < THRESHOLD_SERVER_CONVERT_RE and vm_type.device_type == TYPE_COMPUTE:
+            return False
+        else:
+            return self._deploy_vm_b(vm)
+
+    def _proper_deploy_vm_a(self, vm: Vm) -> bool:
+        mem = self.type_.half_memory - self._memory_used_a
+        core = self.type_.half_core - self._core_used_a
+        if mem == 0 or core == 0:
+            return False
+        vm_type = vm.type_
+        # 存储型的服务器不接收计算型的虚拟机了
+        if mem / core > THRESHOLD_SERVER_CONVERT and vm_type.device_type == TYPE_COMPUTE:
+            return False
+        # 计算型服务器不接收存储型的虚拟机了
+        elif mem / core < THRESHOLD_SERVER_CONVERT_RE and vm_type.device_type == TYPE_MEMORY:
+            return False
+        else:
+            return self._deploy_vm_a(vm)
 
     def _deploy_vm_double(self, vm: Vm) -> bool:
         half_core = vm.type_.core_num // 2
@@ -269,6 +315,7 @@ class Server:
         self._core_used_a += half_core
         self._core_used_b += half_core
         self._vms_double[vm.id_] = vm
+        vm.deployed_to(self, 'D')
         return True
 
     def _deploy_vm_a(self, vm: Vm) -> bool:
@@ -284,6 +331,7 @@ class Server:
         self._memory_used_a += mem
         self._core_used_a += core
         self._vms_a[vm.id_] = vm
+        vm.deployed_to(self, 'A')
         return True
 
     def _deploy_vm_b(self, vm: Vm) -> bool:
@@ -299,6 +347,7 @@ class Server:
         self._memory_used_b += mem
         self._core_used_b += core
         self._vms_b[vm.id_] = vm
+        vm.deployed_to(self, 'B')
         return True
 
     def check_test(self):
