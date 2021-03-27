@@ -71,6 +71,15 @@ class ServerType:
         self.memory = int(res[2])
         self.price = int(res[3])
         self.energy_cost = int(res[4])
+        # 通过对80个服务器进行数据相关性分析得：
+        # price_pre = 219 x core + 104 x mem
+        # 1000 * energy_pre = 275 x core + 130 x mem
+        # 后期基于服务器价格排名
+        price_pre = self.price - 219 * self.core_num + 104 * self.memory
+        self.price_index = (self.price - price_pre) / price_pre  # 价格的偏离程度，此指数越小越好
+        # 前期基于能耗排名
+        energy_pre = 275 * self.core_num + 130 * self.memory
+        self.energy_index = (self.energy_cost - energy_pre) / energy_pre  # 能耗的偏离程度，此指数越小越好
 
     def get_memory(self):
         return self.memory

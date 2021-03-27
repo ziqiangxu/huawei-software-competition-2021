@@ -39,7 +39,6 @@ def main():
         for i in range(request_num):
             req = Request(sys.stdin.readline())
             requests.append(req)
-        # TODO 必须依次处理请求
         dispatcher.handle_requests(requests)
         # if day == 2:
         #     # 只处理部分的请求，进行测试
@@ -51,15 +50,15 @@ def main():
 def compute_cost(start):
     expense = state.total_server_expense()
     print(f'Total time cost: {time.time() - start}, '
-          f'{expense[1]} servers installed and have cost: {expense[0] / 1000}k\n')
+          f'{expense[1]} servers installed and have cost: {expense[0] / 1000000000} Billion\n')
 
 
 if __name__ == "__main__":
     # logging.basicConfig(level=logging.DEBUG)
     # logging.basicConfig(level=logging.INFO)
     # logging.basicConfig(level=logging.ERROR)
-    # start = time.time()
+    start = time.time()
 
     main()
 
-    # compute_cost(start)
+    compute_cost(start)

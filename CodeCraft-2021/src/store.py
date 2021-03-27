@@ -25,6 +25,7 @@ class State:
     def server_types(self, types: List[ServerType]):
         # 对服务器按照内存从小到大排序
         # types.sort(key=ServerType.get_memory, reverse=True)
+
         for t in types:
             key = t.server_model.strip()
             self._server_types_hash[key] = t
