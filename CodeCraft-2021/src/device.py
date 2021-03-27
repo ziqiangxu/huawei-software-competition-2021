@@ -65,8 +65,8 @@ class VmType:
             self._prefer_server.sort(key=ServerType.get_mem_core_ratio)
         elif self.device_type == TYPE_MEMORY:
             self._prefer_server.sort(key=ServerType.get_mem_core_ratio, reverse=True)
-        # elif self.device_type == TYPE_BALANCE:
-        #     self._prefer_server.sort(key=ServerType.get_price_index, reverse=False)
+        elif self.device_type == TYPE_BALANCE:
+            self._prefer_server.sort(key=ServerType.get_price_energy_ratio, reverse=True)
         return
 
     def __str__(self):
@@ -104,6 +104,10 @@ class ServerType:
         # 前期基于能耗排名
         energy_pre = 275 * self.core_num + 130 * self.memory
         self.energy_index = (self.energy_cost - energy_pre) / energy_pre  # 能耗的偏离程度，此指数越小越好
+        self.price_energy_ratio = self.price_index / self.energy_cost  # 每功率（电费）的价格，越便宜越好
+
+    def get_price_energy_ratio(self):
+        return self.price_energy_ratio
 
     def get_price_index(self):
         return self.price_index

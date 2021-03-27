@@ -81,10 +81,12 @@ class State:
             return node
 
         # TODO 尝试的服务器越多则越慢，利用率更高
-        for s in self.servers[-300:]:
-            # node = s.deploy_vm(vm)
+        # 从后往前搜索，搜索1000个服务器
+        index = len(self.servers) - 1
+        for s in self.servers[-1000:]:
+            node = s.deploy_vm(vm)
             # 使用更优的部署函数
-            node = s.proper_deploy_vm(vm)
+            # node = s.proper_deploy_vm(vm)
             if node != 'F':
                 self._vms[vm.id_] = vm
                 return node
